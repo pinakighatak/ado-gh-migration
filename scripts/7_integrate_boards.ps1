@@ -205,6 +205,11 @@ if ($repositoriesToIntegrate.Count -eq 0) {
     exit 0
 }
 
+# Swap environment variables before integration
+Write-Host "`n   🔄 Swapping GH_PAT and GH_BoardsPAT for Boards integration..." -ForegroundColor Gray
+Set-EnvVarsSwap -FirstValue $env:GH_PAT -SecondValue $env:GH_BoardsPAT
+Write-Host "   ✅ Environment variables swapped" -ForegroundColor Green
+
 # 4. INTEGRATE BOARDS
 Write-Host "`n[4/5] Integrating Azure Boards with GitHub repositories..." -ForegroundColor Yellow
 
@@ -343,6 +348,10 @@ $(foreach ($result in $results) {
 
 $logContent | Out-File -FilePath $logFile -Encoding UTF8
 Write-Host "`n📄 Log saved: $logFile" -ForegroundColor Gray
+# Swap environment variables before integration
+Write-Host "`n   🔄 Swapping GH_PAT and GH_BoardsPAT back to original values..." -ForegroundColor Gray
+Set-EnvVarsSwap -FirstValue $env:GH_BoardsPAT -SecondValue $env:GH_PAT
+Write-Host "   ✅ Environment variables swapped" -ForegroundColor Green
 
 # Next steps
 if ($successCount -gt 0 -and $failureCount -eq 0) {

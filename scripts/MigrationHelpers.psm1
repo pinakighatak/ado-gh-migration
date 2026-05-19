@@ -71,6 +71,11 @@ function Test-RequiredPATs {
         $allValid = $false
     }
     
+    if ($GitHubBoardsRequired -and !$env:GH_BoardsPAT) {
+        Write-Host "❌ GH_BoardsPAT environment variable not set" -ForegroundColor Red
+        Write-Host "   Please set your GitHub Boards Personal Access Token as documented in README" -ForegroundColor Yellow
+        $allValid = $false
+    }
     if ($allValid) {
         Write-Host "✅ PAT tokens validated" -ForegroundColor Green
     }
@@ -115,7 +120,8 @@ function Get-MigrationConfig {
         $config = Get-Content -Path $ConfigPath -Raw | ConvertFrom-Json
         Write-Host "✅ Configuration loaded successfully" -ForegroundColor Green
         return $config
-    } catch {
+    }
+    catch {
         Write-Host "❌ Failed to load configuration: $($_.Exception.Message)" -ForegroundColor Red
         return $null
     }
@@ -156,7 +162,8 @@ function Get-LatestStateFile {
     if (![string]::IsNullOrEmpty($StateFile) -and $StateFile -ne "auto") {
         if (Test-Path $StateFile) {
             return $StateFile
-        } else {
+        }
+        else {
             Write-Host "❌ ERROR: Specified state file not found: $StateFile" -ForegroundColor Red
             return $null
         }
@@ -164,7 +171,7 @@ function Get-LatestStateFile {
     
     # Auto-discover the most recent state file
     $stateFiles = Get-ChildItem -Path "." -Filter $Pattern -ErrorAction SilentlyContinue | 
-                  Sort-Object LastWriteTime -Descending
+    Sort-Object LastWriteTime -Descending
     
     if ($stateFiles.Count -eq 0) {
         Write-Host "❌ ERROR: No migration state files found matching pattern: $Pattern" -ForegroundColor Red
@@ -228,7 +235,8 @@ function Get-ProjectServiceConnections {
             -o json 2>$null | ConvertFrom-Json
         
         return $connections
-    } catch {
+    }
+    catch {
         Write-Host "⚠️  Failed to query service connections for project '$ProjectName': $($_.Exception.Message)" -ForegroundColor Yellow
         return $null
     }
@@ -271,11 +279,11 @@ function New-RepositoryMapping {
         $key = "$($repo.AdoTeamProject)|$($repo.AdoRepository)"
         
         $mapping[$key] = @{
-            AdoOrganization = $repo.AdoOrganization
-            AdoTeamProject = $repo.AdoTeamProject
-            AdoRepository = $repo.AdoRepository
+            AdoOrganization    = $repo.AdoOrganization
+            AdoTeamProject     = $repo.AdoTeamProject
+            AdoRepository      = $repo.AdoRepository
             GitHubOrganization = $repo.GitHubOrganization
-            GitHubRepository = $repo.GitHubRepository
+            GitHubRepository   = $repo.GitHubRepository
         }
     }
     
@@ -331,7 +339,8 @@ function Add-GitHubColumnsToReposCSV {
             if (Test-Path $altRepo) {
                 Write-Host "   repos.csv not found at default; using $altRepo" -ForegroundColor DarkYellow
                 $RepoCSVPath = $altRepo
-            } else {
+            }
+            else {
                 throw "repos.csv file not found at: $RepoCSVPath or $altRepo"
             }
         }
@@ -341,7 +350,8 @@ function Add-GitHubColumnsToReposCSV {
             if (Test-Path $altConfig) {
                 Write-Host "   migration-config.json not found at default; using $altConfig" -ForegroundColor DarkYellow
                 $ConfigPath = $altConfig
-            } else {
+            }
+            else {
                 throw "migration-config.json file not found at: $ConfigPath or $altConfig"
             }
         }
@@ -383,14 +393,14 @@ function Add-GitHubColumnsToReposCSV {
         Write-Host "   Output written to: $OutputPath" -ForegroundColor Gray
         Write-Host "   ✅ Added ghorg and ghrepo columns to repos.csv" -ForegroundColor Green
         Write-Host ""
-            Write-Host "ℹ️  Default mapping applied:" -ForegroundColor Cyan
-            Write-Host "   • ghorg: $githubOrg (from migration-config.json)" -ForegroundColor Gray
-            Write-Host "   • ghrepo: Same as ADO repository name" -ForegroundColor Gray
-            Write-Host ""
-            Write-Host "⚠️  Please verify this mapping is correct for your migration needs!" -ForegroundColor Yellow
-            Write-Host "   If you need different GitHub repository names, edit the 'ghrepo' column in $OutputPath" -ForegroundColor Yellow
-            Write-Host "   before proceeding with the migration." -ForegroundColor Yellow
-            Write-Host ""
+        Write-Host "ℹ️  Default mapping applied:" -ForegroundColor Cyan
+        Write-Host "   • ghorg: $githubOrg (from migration-config.json)" -ForegroundColor Gray
+        Write-Host "   • ghrepo: Same as ADO repository name" -ForegroundColor Gray
+        Write-Host ""
+        Write-Host "⚠️  Please verify this mapping is correct for your migration needs!" -ForegroundColor Yellow
+        Write-Host "   If you need different GitHub repository names, edit the 'ghrepo' column in $OutputPath" -ForegroundColor Yellow
+        Write-Host "   before proceeding with the migration." -ForegroundColor Yellow
+        Write-Host ""
         return $updatedRepos
     }
     catch {
@@ -398,6 +408,67 @@ function Add-GitHubColumnsToReposCSV {
         throw
     }
 }
+
+# ========================================
+# 7. Environment Variable Swap
+# ========================================
+
+<#
+.SYNOPSIS
+    Swaps two string values and assigns them to GH_PAT and GH_BoardsPAT environment variables.
+
+.DESCRIPTION
+    Takes two string variables, swaps their values, and assigns them to the environment variables
+    GH_PAT and GH_BoardsPAT. Displays the swapped values on the console.
+
+.PARAMETER FirstValue
+    The first string value to swap.
+
+.PARAMETER SecondValue
+    The second string value to swap.
+
+.EXAMPLE
+    Set-EnvVarsSwap -FirstValue "token1" -SecondValue "token2"
+    # Assigns token2 to GH_PAT and token1 to GH_BoardsPAT
+#>
+function Set-EnvVarsSwap {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]$FirstValue,
+
+        [Parameter(Mandatory = $true)]
+        [string]$SecondValue
+    )
+
+    try {
+        # Swap the values
+        $temp = $FirstValue
+        $FirstValue = $SecondValue
+        $SecondValue = $temp
+
+        # Validate string lengths
+        if ($FirstValue.Length -ne 40 -or $SecondValue.Length -ne 40) {
+            throw "Environment variable values must be exactly 40 characters"
+        }
+
+        # Assign to environment variables both ways
+        $env:GH_PAT = $FirstValue
+        $env:GH_BoardsPAT = $SecondValue
+        [Environment]::SetEnvironmentVariable('GH_PAT', $FirstValue, 'Process')
+        [Environment]::SetEnvironmentVariable('GH_BoardsPAT', $SecondValue, 'Process')
+
+        # Verify the values were set correctly
+        if ($env:GH_PAT.Length -ne 40 -or $env:GH_BoardsPAT.Length -ne 40) {
+            throw "Failed to set environment variables with correct lengths (40 characters required)"
+        }
+    }
+    catch {
+        Write-Host "❌ Failed to swap environment variables: $_" -ForegroundColor Red
+        throw
+    }
+}
+
 
 # ========================================
 # Module Exports
@@ -409,5 +480,6 @@ Export-ModuleMember -Function @(
     'Get-LatestStateFile',
     'Get-ProjectServiceConnections',
     'New-RepositoryMapping',
-    'Add-GitHubColumnsToReposCSV'
+    'Add-GitHubColumnsToReposCSV',
+    'Set-EnvVarsSwap'
 )

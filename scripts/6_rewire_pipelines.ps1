@@ -122,7 +122,7 @@ try {
     Write-Host "   ADO Organization: $ADO_ORG" -ForegroundColor Gray
     Write-Host "   GitHub Organization: $GITHUB_ORG" -ForegroundColor Gray
     Write-Host "   Team Projects: $($projectGroups.Count)" -ForegroundColor Gray
-    
+ 
     foreach ($projectGroup in $projectGroups) {
         Write-Host "      - $($projectGroup.Name): $($projectGroup.Count) repo(s)" -ForegroundColor Cyan
     }
@@ -256,7 +256,7 @@ foreach ($pipelineEntry in $allPipelinesFromCsv) {
             AdoRepo = $repoName
             GitHubRepo = $githubRepoName
         }
-        Write-Host "      ✅ $pipelineName → uses $repoName (will rewire to $githubRepoName)" -ForegroundColor Green
+        Write-Host "      ✅ $pipelineName → uses $repoName (will rewire to GitHub repo: $githubRepoName)" -ForegroundColor Green
         
     } catch {
         Write-Host "      ⚠️  $pipelineName → error checking details: $($_.Exception.Message)" -ForegroundColor Yellow

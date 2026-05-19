@@ -1,6 +1,6 @@
 # 🚀Orchestrating Azure DevOps to GitHub Enterprise Migration Using ADO2GH Extension
 
-*Published: November 16, 2025*
+*Published: May 19, 2026*
 
 ---
 
@@ -71,7 +71,7 @@ winget install GitHub.cli
 **Verify Installation:**
 ```powershell
 gh --version
-# Should show gh version 2.x or higher
+# Should show gh version 2.x or higher (tested on 2.92.0 (2026-04-28))
 ```
 
 **Authentication:**
@@ -96,7 +96,7 @@ winget install Microsoft.AzureCLI
 
 **Verify Installation:**
 ```powershell
-# Should show azure-cli version 2.x or higher
+# Should show azure-cli version 2.x or higher (tested on:  2.86.0)
 az --version
 ```
 
@@ -135,7 +135,7 @@ gh extension upgrade --all
 
 ## 🔐Defining Personal Access Token Scopes
 
-#### Azure DevOps Personal Access Token
+### Azure DevOps Personal Access Token
 
 The ADO_PAT token is used to authenticate with Azure DevOps and perform operations on repositories, pipelines, Azure Boards, Service connections and projects.
 
@@ -172,18 +172,24 @@ To generate the Azure DevOps inventory report, a PAT with full access or elevate
 $env:ADO_PAT="your-ado-pat-token-here"
 
 # Windows PowerShell (persistent)
-[System.Environment]:SetEnvironmentVariable('ADO_PAT', 'your-ado-pat-token-here', 'User')
+[System.Environment]::SetEnvironmentVariable('ADO_PAT', 'your-ado-pat-token-here', 'User')
 
 # Verify it's set
+# Windows PowerShell (current session)
 $env:ADO_PAT
+
+# Windows PowerShell (persistent)
+[System.Environment]::GetEnvironmentVariable('ADO_PAT', 'User')
+
 ```
 
 ⚠️ **Security Best Practice:** PAT tokens function much like passwords, so they must be handled and stored with extreme caution. 
 Never commit PAT tokens to version control. Always store them securely using a password manager, environment variable, or a secret management tool (such as Azure Key Vault or GitHub Secrets).
 
-#### GitHub Personal Access Token
+### GitHub Personal Access Token
+We need two tokens here, with names `GH_PAT` and `GH_BoardsPAT`.
 
-The GH_PAT token authenticates with GitHub Enterprise and is required for organization-level operations.
+The `GH_PAT` token authenticates with GitHub Enterprise and is required for organization-level operations.
 
 **Required Scopes:**
 - `repo` - Full control of private repositories
@@ -191,8 +197,11 @@ The GH_PAT token authenticates with GitHub Enterprise and is required for organi
 - `admin:org` - Full control of organizations and teams
 - `user:read` - Read user profile data
 - `user:email` - Access user email addresses
-- `write:discussion` - Create and manage discussions
 - `delete_repo` — Delete repositories (optional, for rollback scenarios)
+- `write:discussion` - Create and manage discussions
+
+> ℹ️ Info: The value from this token should bne assigned to environment variable `GH_PAT`
+
 
 **Creating the Token:**
 1. Navigate to GitHub Settings: `https://github.com/settings/tokens`
@@ -206,12 +215,41 @@ The GH_PAT token authenticates with GitHub Enterprise and is required for organi
 ```powershell
 # Windows PowerShell (current session)
 $env:GH_PAT="your-github-pat-token-here"
+# Verify it's set
+$env:GH_PAT
 
 # Windows PowerShell (persistent)
 [System.Environment]:SetEnvironmentVariable('GH_PAT', 'your-github-pat-token-here', 'User')
 
 # Verify it's set
-$env:GH_PAT
+# Windows PowerShell (persistent)
+[System.Environment]::GetEnvironmentVariable('GH_PAT', 'User')
+```
+
+The `GH_BoardsPAT` token will be used only for Azure boards to GitHub integrations. This token will be used after Step 6.
+For this token there is a limited scope and should be **exactly as it** is shown below:
+
+**Required Scopes:**
+- `repo` - Full control of private repositories
+- `admin:repo_hook` - Full control of organizations and teams
+- `user:read` - Read user profile data
+- `user:email` - Access user email addresses
+
+> ℹ️ Info: The value from this token should be assigned to environment variable `GH_BoardsPAT`
+
+**Setting the Environment Variable:**
+```powershell
+# Windows PowerShell (current session)
+$env:GH_BoardsPAT="your-github-pat-token-here"
+# Verify it's set
+$env:GH_BoardsPAT
+
+# Windows PowerShell (persistent)
+[System.Environment]::SetEnvironmentVariable('GH_BoardsPAT', 'your-github-pat-token-here', 'User')
+# Verify it's set
+
+# Windows PowerShell (persistent)
+[System.Environment]::GetEnvironmentVariable('GH_BoardsPAT', 'User')
 ```
 
 ---
@@ -221,22 +259,28 @@ Before jumping into the scripts, let’s walk through the migration workflow to 
 
 
 ```mermaid
-
+%%{init: {'theme': 'base', 'themeVariables': {
+  'background': 'transparent',
+  'fontFamily': 'Consolas, "Courier New", monospace',
+  'primaryTextColor': '#0f172a',
+  'lineColor': '#326ec3',
+  'tertiaryColor': '#ffffff'
+}}}%%
 flowchart LR
 
 %% -------- Row 1 (top) --------
 subgraph Row_1[ ]
   direction LR
 
-  subgraph S1["Prerequisites"]
+  subgraph S1["**Prerequisites**"]
     B1["• Install required tools<br/>• Configure environment<br/>• Set up credentials"]
   end
 
-  subgraph S2["Planning"]
+  subgraph S2["**Planning**"]
     B2["• Inventory repositories<br/>• Check active processes<br/>• Prepare migration plan"]
   end
 
-  subgraph S3["Migration"]
+  subgraph S3["**Migration**"]
     B3["• Lock ADO repositories<br/>• Execute migration jobs<br/>• Track migration status"]
   end
 end
@@ -244,34 +288,42 @@ end
 %% -------- Row 2 (bottom) --------
 subgraph Row_2[ ]
 
-  subgraph S4["Post Migration Validation"]
+  subgraph S4["**Post Migration Validation**"]
     B4["• Validate commits<br/>• Validate branches<br/>• Compare results"]
   end
 
-  subgraph S5["ADO to GHE Integration"]
+  subgraph S5["**ADO to GHE Integration**"]
     B5["• Generate mannequins<br/>• Reclaim mannequins<br/>• Rewire pipelines<br/>• Integrate boards"]
   end
 
-  subgraph S6["Post Integration Validation"]
+  subgraph S6["**Post Integration Validation**"]
     B6["• Verify pipeline connectivity<br/>• Test board integration<br/>• Confirm user mappings"]
   end
 end
 
+style Row_1 fill:transparent,stroke:transparent
+style Row_2 fill:transparent,stroke:transparent
+
+style S1 fill:#eff6ff,stroke:#60a5fa,color:#0f172a,stroke-width:2px
+style S2 fill:#f0fdf4,stroke:#4ade80,color:#0f172a,stroke-width:2px
+style S3 fill:#fff7ed,stroke:#fb923c,color:#0f172a,stroke-width:2px
+style S4 fill:#fef2f2,stroke:#f87171,color:#0f172a,stroke-width:2px
+style S5 fill:#f5f3ff,stroke:#a78bfa,color:#0f172a,stroke-width:2px
+style S6 fill:#ecfeff,stroke:#22d3ee,color:#0f172a,stroke-width:2px
+
+style B1 fill:#dbeafe,stroke:#2563eb,color:#0f172a,stroke-width:2px
+style B2 fill:#dcfce7,stroke:#16a34a,color:#0f172a,stroke-width:2px
+style B3 fill:#fed7aa,stroke:#ea580c,color:#0f172a,stroke-width:2px
+style B4 fill:#fee2e2,stroke:#dc2626,color:#0f172a,stroke-width:2px
+style B5 fill:#ede9fe,stroke:#7c3aed,color:#0f172a,stroke-width:2px
+style B6 fill:#cffafe,stroke:#0891b2,color:#0f172a,stroke-width:2px
+
 %% Logical flows
-S1 --> S2 --> S3
-S4 --> S5 --> S6
-S3 --> S4
+S1 ==> S2 ==> S3
+S4 ==> S5 ==> S6
+S3 ==> S4
 Row_2 --- Row_1
-    style S1 fill:#2196F3,color:#FFF
-    style S2 fill:#2196F3,color:#FFF
-    style S3 fill:#2196F3,color:#FFF
-    style S4 fill:#2196F3,color:#FFF
-    style S5 fill:#2196F3,color:#FFF
-    style S6 fill:#2196F3,color:#FFF
-
 ```
-
-
 
 ### Comprehensive Migration Workflow
 
@@ -420,6 +472,11 @@ gh extension list | Select-String "ado2gh"
 # 5. Verify environment variables are set
 Write-Host "ADO_PAT: $($env:ADO_PAT -ne $null)" -ForegroundColor $(if($env:ADO_PAT) {"Green"} else {"Red"})
 Write-Host "GH_PAT: $($env:GH_PAT -ne $null)" -ForegroundColor $(if($env:GH_PAT) {"Green"} else {"Red"})
+
+# 6. Authenticate to Azure Devops with your newly created token.
+
+# At the Token prompt - paste in the same token that was the value for your ADO_PAT. The console will not show any response here.
+az devops login
 
 # 6. Test Azure DevOps connectivity
 az devops project list --org "https://dev.azure.com/your-ado-org"
@@ -807,7 +864,7 @@ After successfully migrating the repositories and completing all integrations, d
 - Change the remote URL for the origin remote to the GitHub repository using this command: `git remote set-url origin <GitHub_repository_URL>`
 - The command used to list all the remote branches available in the remote repository named origin: `git ls-remote --heads origin`
 
-
+---
 
 
 
