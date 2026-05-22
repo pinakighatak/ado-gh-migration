@@ -1,12 +1,12 @@
 # 🚀Orchestrating Azure DevOps to GitHub Enterprise Migration Using ADO2GH Extension
 
-*Published: May 19, 2026*
+*Published: May 22, 2026*
 
 ---
 
 ## 🧭 Overview
 
-Migrating from **Azure DevOps (ADO)** to **GitHub Enterprise (GHE)** is a complex undertaking that requires careful planning, execution, and validation. While manual migration is possible for a handful of repositories, organizations with dozens or hundreds of repositories need an automated, repeatable, and traceable approach.
+Migrating from **Azure DevOps (ADO) Services** to **GitHub Enterprise Cloud (GHEC)** is a complex undertaking that requires careful planning, execution, and validation. While manual migration is possible for a handful of repositories, organizations with dozens or hundreds of repositories need an automated, repeatable, and traceable approach.
 
 This article introducing the **ADO2GH Migration PowerShell Scripts** - a **collection of modular automation scripts** purpose-built to simplify, orchestrate, and validate each stage of the migration journey, from initial preparation to final post-migration checks.
 
@@ -53,7 +53,7 @@ winget install Microsoft.PowerShell
 **Verify Installation:**
 ```powershell
 $PSVersionTable.PSVersion
-# Should show version 7.0 or higher
+# Should show version 7.0 or higher (last tested on 7.6.2)
 ```
 
 #### 2. GitHub CLI (gh)
@@ -472,6 +472,7 @@ gh extension list | Select-String "ado2gh"
 # 5. Verify environment variables are set
 Write-Host "ADO_PAT: $($env:ADO_PAT -ne $null)" -ForegroundColor $(if($env:ADO_PAT) {"Green"} else {"Red"})
 Write-Host "GH_PAT: $($env:GH_PAT -ne $null)" -ForegroundColor $(if($env:GH_PAT) {"Green"} else {"Red"})
+Write-Host "GH_BoardsPAT: $($env:GH_BoardsPAT -ne $null)" -ForegroundColor $(if($env:GH_BoardsPAT) {"Green"} else {"Red"})
 
 # 6. Authenticate to Azure Devops with your newly created token.
 
@@ -626,7 +627,7 @@ This script validates migrated repositories by retrieving data from both **ADO**
 
 🧰 **Prerequisites:**
 - GitHub CLI (gh) installed and authenticated
-- Set the ADO_PAT and GH_PAT environment variables with their respective Personal Access Tokens.
+- Set the ADO_PAT and GH_PAT and GH_BoardsPAT environment variables with their respective Personal Access Tokens.
 - State file from `2_migrate_repo.ps1` (`migration-state-comprehensive-*.json`)
 
 ⚡ **Commands Used:**
@@ -689,7 +690,7 @@ This script generates a CSV file of **mannequin users** (placeholder accounts) t
 - Generate **mannequins** to a custom CSV file location: `.\4_generate_mannequins.ps1 [-OutputCSV "custom-mannequins.csv"]`
 
 ⚙️ **Order of operations:**
-- **[1/3]** Validate GitHub PAT token
+- **[1/3]** Validate GitHub PAT token(s)
 - **[2/3]** Load configuration from `migration-config.json`
 - **[3/3]** Generate `mannequin.csv` using **gh ado2gh CLI**
 
@@ -721,7 +722,7 @@ This script reclaims **mannequin** users (placeholder accounts) by mapping them 
 - Use a custom CSV file location instead of the default: `.\5_reclaim_mannequins.ps1 -MannequinsCSV "custom-mannequins.csv"`
 
 ⚙️ **Order of operations:**
-- **[1/4]** Validate **GitHub PAT** token
+- **[1/4]** Validate **GitHub PAT** token(s)
 - **[2/4]** Load migration configuration from `migration-config.json`
 - **[3/4]** Validate `mannequins.csv` file exists and contains data
 - **[4/4]** Execute mannequin reclaims using **gh ado2gh CLI**
@@ -758,7 +759,7 @@ This script **rewires Azure DevOps pipelines** to use the new **GitHub repositor
 - custom config path: `.\6_rewire_pipelines.ps1 -ConfigPath "custom-config.json"`
 
 ⚙️ **Order of operations:**
-- **[1/7]** Validate PAT tokens (**ADO_PAT** and **GH_PAT**)
+- **[1/7]** Validate PAT tokens (**ADO_PAT** and **GH_PAT** and **GH_BoardsPAT**)
 - **[2/7]** Load configuration from `migration-config.json` with parameter overrides
 - **[3/7]** Load **migration state file** with successfully migrated repositories
 - **[4/7]** Load pipeline inventory from `pipelines.csv` (source of truth)
@@ -784,7 +785,7 @@ This script **rewires Azure DevOps pipelines** to use the new **GitHub repositor
 This script integrates **Azure Boards**  with the **migrated GitHub repositories**. It reads repository inventory from `repos.csv` and integrates each repository with **Azure Boards** for cross-platform **workItem** linking.
 
 🧰 **Prerequisites:**
-- Set the **ADO_PAT** and **GH_PAT** environment variables with their respective Personal Access Tokens.
+- Set the **ADO_PAT** and **GH_PAT** and the **GH_BoardsPAT** environment variables with their respective Personal Access Tokens.
 - `repos.csv` from `0_Inventory.ps1`
 - Repositories already migrated to GitHub
 - For **Boards integration**, ensure the GitHub Personal Access Token includes the required scopes: `repo`; `admin:repo_hook`; `read:user`; `user:email`;
@@ -804,7 +805,7 @@ This script integrates **Azure Boards**  with the **migrated GitHub repositories
 - Specify a different CSV file with repository information: `.\7_integrate_boards.ps1 -ReposFile "custom-repos.csv"`
 
 ⚙️ **Order of operations:**
-- **[1/5]** Validate PAT tokens (**ADO_PAT** and **GH_PAT**)
+- **[1/5]** Validate PAT tokens (**ADO_PAT** and **GH_PAT** and the **GH_BoardsPAT** )
 - **[2/5]** Load repository inventory from `repos.csv` (source of truth)
 - **[3/5]** Check for existing **GitHub connections** (prevent VS403674 error)
 - **[4/5]** **Integrate boards** for each repository
@@ -822,7 +823,7 @@ This script integrates **Azure Boards**  with the **migrated GitHub repositories
 This script disables **Azure Devops repositories** after successful migration and validation. It prevents further changes to the source repositories.
 
 🧰 **Prerequisites:**
-- Set the **ADO_PAT** and **GH_PAT** environment variables with their respective PAT.
+- Set the **ADO_PAT** and **GH_PAT** and the **GH_BoardsPAT** environment variables with their respective PAT.
 - Repositories must be successfully migrated (Step 2 - `2_migrate_repo.ps1`)
 - Repositories must be validated (Step 3 - `3_migration_validation.ps1`)
 - **Migration state file** from `2_migrate_repo.ps1` must exist
@@ -841,7 +842,7 @@ This script disables **Azure Devops repositories** after successful migration an
 - Specify a different `migration-config.json` file: `.\8_disable_ado_repos.ps1 -ConfigPath "custom-config.json"`
 
 ⚙️ **Order of operations:**
-- **[1/4]** Validate **ADO_PAT** and **GH_PAT** PAT tokens
+- **[1/4]** Validate **ADO_PAT** ,**GH_PAT** and the **GH_BoardsPAT** PAT tokens
 - **[2/4]** Load configuration from `migration-config.json` with parameter overrides
 - **[3/4]** Load repository information from **migration state file**
 - **[4/4]** **Disable ADO** repositories (with user confirmation)

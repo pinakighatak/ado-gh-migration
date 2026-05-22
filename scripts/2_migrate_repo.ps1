@@ -1,4 +1,5 @@
-# Copyright (c) 2025 Vamsi Cherukuri, Microsoft
+# Copyright (c) 2026 Microsoft
+# Contributors: Vamsi Cherukuri, Pinaki Ghatak
 # 
 # MIT License
 # 

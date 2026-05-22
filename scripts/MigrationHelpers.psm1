@@ -1,4 +1,5 @@
-# Copyright (c) 2025 Vamsi Cherukuri, Microsoft
+# Copyright (c) 2026 Microsoft
+# Contributors: Vamsi Cherukuri, Pinaki Ghatak
 # 
 # MIT License
 # 
@@ -28,7 +29,7 @@
 # Usage: Import-Module "$scriptPath\MigrationHelpers.psm1" -Force
 
 # ========================================
-# 1. PAT Token Validation
+# 1. PAT Token(s) Validation
 # ========================================
 
 <#
@@ -36,7 +37,7 @@
     Validates required Personal Access Tokens (PATs) are set in environment variables.
 
 .DESCRIPTION
-    Checks if ADO_PAT and/or GH_PAT environment variables are set based on requirements.
+    Checks if ADO_PAT and/or GH_PAT, and GH_BoardsPAT environment variables are set based on requirements.
     Used by all scripts to ensure authentication tokens are available before proceeding.
 
 .PARAMETER ADORequired
@@ -44,6 +45,9 @@
 
 .PARAMETER GitHubRequired
     Whether GitHub PAT is required. Default is $true.
+
+.PARAMETER GitHubBoardsRequired
+    Whether GitHub Boards PAT is required. Default is $true.
 
 .EXAMPLE
     if (!(Test-RequiredPATs)) { exit 1 }
